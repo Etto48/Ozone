@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "string_view": "cpp",
+        "cstdlib": "cpp"
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/mnt/c/Users/the_E/OneDrive/Desktop/Dev/OZONE/OZONE3_64/bin",
+            "binaryPath": "/mnt/c/Users/the_E/OneDrive/Desktop/Dev/OZONE/OZONE3_64/bin/ozone-3.0.0.bin",
+            "binaryArgs": []
+        }
+    ],
+    "python.pythonPath": "/bin/python3"
+}

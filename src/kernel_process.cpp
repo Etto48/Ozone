@@ -2,39 +2,6 @@
 
 namespace kernel
 {
-    void test_anim(uint8_t color, uint8_t x, uint8_t y)
-    {
-        uint64_t i = 0;
-        char anim[] = "/-\\|";
-        while (true)
-        {
-            put_char(anim[i], color, x, y);
-            i++;
-            i %= 4;
-            ozone::user::sleep(100);
-        }
-    }
-
-    void test_ret()
-    {
-        printf("\e[0;1H");
-        while (true)
-        {
-            printf("%c", keyboard::getc());
-        }
-    }
-    void status()
-    {
-        char anim[] = "|/-\\";
-        uint8_t i = 0;
-        while (true)
-        {
-            printf("\e[s\e[H\e[30;47m\e[2KOZONE\e[40;0HProc:%uld FreeMem:%uld/%uldKiB\e[10000C%c\e[u\e[0m", multitasking::process_count, (paging::free_frames * 0x1000) / (1024), paging::system_memory / (1024), anim[i]);
-            ozone::user::sleep(500);
-            i++;
-            i %= 4;
-        }
-    }
 
     volatile bool startup_done = false;
     void startup_loading_anim_sigterm()
@@ -53,18 +20,47 @@ namespace kernel
             ozone::user::sleep(36);
         }
     }
+    void fork_modules()
+    {
+        multitasking::cli();
+        if (boot_info::mbi.flags & MULTIBOOT_INFO_MODS && boot_info::mbi.mods_count >= 1)
+        {
+            debug::log(debug::level::inf,"%ud module(s) found", boot_info::mbi.mods_count);
+            for (uint64_t mn = 0; mn < boot_info::mbi.mods_count; mn++)
+            {
+                auto &modr = ((multiboot_module_t *)(uint64_t)boot_info::mbi.mods_addr)[mn];
+                auto ptrie = paging::create_paging_trie();
+                auto level = memory::memcmp((void*)(uint64_t)modr.cmdline,"shell",4) ? interrupt::privilege_level_t::user : interrupt::privilege_level_t::system;
+                multitasking::mapping_history_t* mh;
+                auto entry = modules::load_module(&modr, ptrie, level, mh);
+                if (entry == nullptr)
+                    debug::log(debug::level::wrn,"  \e[31mModule %uld failed to load\e[0m\n", mn);
+                else
+                {
+                    
+                    auto pid = multitasking::create_process((void *)entry, ptrie, level, 0, mh);
+                    debug::log(debug::level::wrn,"  Module %s(%uld) loaded as %s process %uld\n", (uint64_t)modr.cmdline, mn,
+                        level==interrupt::privilege_level_t::system?"system":"user", pid);
+                }
+            }
+        }
+        else
+        {
+            debug::log(debug::level::wrn,"\e[31mcNo modules found\e[0m\n");
+        }
+        multitasking::sti();
+    }
     void startup()
     {
         video::draw_image(ozone_logo[0], {256, 256}, video::get_screen_size() / 2 - video::v2i{256, 256} / 2);
-        // printf("\e[%uld;%uldH[", (video::get_screen_size() / 8 / 2).x - 11, (video::get_screen_size() / 8 / 2).y + 8);
-        // printf("\e[%uld;%uldH]", (video::get_screen_size() / 8 / 2).x + 10, (video::get_screen_size() / 8 / 2).y + 8);
-        // for (uint64_t i = 1; i < 21; i++)
-        // {
-        //     printf("\e[%uld;%uldH=", (video::get_screen_size() / 8 / 2).x - 11 + i, (video::get_screen_size() / 8 / 2).y + 8);
-        //     ozone::user::sleep(200);
-        // }
         auto startup_loading_anim_id = ozone::user::fork(startup_loading_anim);
-        ozone::user::sleep(2000);
+        //startup operations    
+        kb::init();
+        acpi::init_apic();  
+        fork_modules();
+
+        ozone::user::sleep(1000);
+        //end startup operations
         ozone::user::signal(ozone::SIGTERM,startup_loading_anim_id);
         ozone::user::join(startup_loading_anim_id);
         printf("\e[%uld;%uldHWelcome to OZONE3 - 64", (video::get_screen_size() / 8 / 2).x - 11, (video::get_screen_size() / 8 / 2).y + 10);
@@ -90,7 +86,6 @@ namespace kernel
         //printf("\e[2J");
         stdout::init();
         stdin::init();
-        kb::init();
         ozone::user::fork(startup);
         while (!startup_done)
             ;

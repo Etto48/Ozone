@@ -2,27 +2,26 @@
 
 namespace apic
 {
-    volatile uint32_t *EOIR = reinterpret_cast<volatile uint32_t *>(0xFEE000B0);
-    volatile uint32_t *IOREGSEL = reinterpret_cast<uint32_t *>(0xFEC0000);
-    volatile uint32_t *IOWIN = reinterpret_cast<uint32_t *>(0xFEC0010);
+    volatile uint32_t *EOIR = reinterpret_cast<volatile uint32_t *>(0xB0);
+    volatile uint32_t *IOREGSEL = reinterpret_cast<uint32_t *>(0x00);
+    volatile uint32_t *IOWIN = reinterpret_cast<uint32_t *>(0x10);
     bool PIC8259_compatibility_mode = false;
     void init()
     {
-        //auto piix3_loc = piix3::locate();
-        //if(piix3_loc.bus==0xFF)
-        {
-            //tty::color_write("PIIX3 not found\n",tty::term_color{vga::color::red,vga::color::black});
-            //tty::write("Setting up compatibility mode...\n");
-            PIC8259_compatibility_mode = true;
-            apic::enable_8259();
-            apic::remap_8259();
-        }
-        /*else
-        {
-            //piix3::ioapic::enable();
-            //tty::write("I/O APIC enabled\n");
-            apic::disable_8259();
-        }*/
+        //tty::color_write("PIIX3 not found\n",tty::term_color{vga::color::red,vga::color::black});
+        //tty::write("Setting up compatibility mode...\n");
+        PIC8259_compatibility_mode = true;
+        apic::enable_8259();
+        apic::remap_8259();
+    }
+    void to_ioapic(void* ioapicbase)
+    {
+        IOWIN = (uint32_t*)((uint64_t)IOWIN + (uint64_t)ioapicbase);
+        IOREGSEL = (uint32_t*)((uint64_t)IOREGSEL + (uint64_t)ioapicbase);
+        EOIR = (uint32_t*)((uint64_t)EOIR + (uint64_t)ioapicbase);
+        PIC8259_compatibility_mode = false;
+        apic::disable_8259();
+        apic::reset();
     }
     void reset()
     {

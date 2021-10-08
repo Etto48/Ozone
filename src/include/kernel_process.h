@@ -2,9 +2,10 @@
 #include "printing.h"
 #include "interrupt.h"
 #include "apic.h"
+#include "acpi.h"
+#include "cpu.h"
 #include "clock.h"
 #include <ozone.h>
-#include <ps2_keyboard.h>
 #include "boot_info.h"
 #include "modules.h"
 #include "pci.h"

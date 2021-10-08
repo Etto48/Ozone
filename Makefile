@@ -106,15 +106,13 @@ $(ISO): $(SO) $(MODULES_BIN) $(HEADERS) $(GRUB_CFG)
 	@cp $(MOD_BIN)/* $(BIN_DIR)/isodir/boot/
 	@grub-mkrescue -o $(ISO) $(BIN_DIR)/isodir 2>&-
 
-$(GRUB_CFG):
+$(GRUB_CFG): $(MODULES_BIN)
 	@echo Creating $@
 	@echo 'set timeout=0' > $(GRUB_CFG)
 	@echo 'set default=0' >> $(GRUB_CFG)
 	@echo 'insmod efi_gop' >> $(GRUB_CFG)
 	@echo 'menuentry "OZONE3 AMD64" {' >> $(GRUB_CFG)
 	@echo '    multiboot /boot/$(SO_NAME).bin' >> $(GRUB_CFG)
-#	@echo '    GFXMODE=1024x768' >> $(GRUB_CFG)	
-#	@echo '    GFXPAYLOAD=1024x768x32' >> $(GRUB_CFG)
 	@for module in $(MODULES) ; do \
         echo "    module /boot/$$module.bin $$module" >> $(GRUB_CFG); \
     done
@@ -135,16 +133,6 @@ $(LIB) : $(LIBOBJFILES)
 all_mods: $(MODULES_BIN)
 
 .SECONDEXPANSION:
-$(MOD_BIN)/%.bin: $$(wildcard $(MOD_SRC)/modules/%/*.cpp) $$(wildcard $(MOD_SRC)/modules/%/*.s) $(MODOBJFILES) $(LIB)
+$(MOD_BIN)/%.bin: $$(wildcard $(MOD_SRC)/modules/%/*.cpp) $$(wildcard $(MOD_SRC)/modules/%/*.s) $$(wildcard $(MOD_SRC)/modules/%/include/*.h) $$(wildcard $(MOD_SRC)/*.cpp) $$(wildcard $(MOD_SRC)/*.s) $(LIB)
 	@echo Creating $@
-#	$(wildcard $(MOD_SRC)/modules/$(basename $(lastword $(subst /, ,$@)))/*.cpp) $(wildcard $(MOD_SRC)/modules/$(basename $(lastword $(subst /, ,$@)))/*.s)
-	@$(CXX) -T $(modlinker) -o $@ $? -z max-page-size=0x1000 $(CXXFLAGS)
-#	mv $@ $(MOD_BIN)/$@.bin
-
-$(MOD_OBJ)/%.s.o: $(MOD_SRC)/%.s $(MODHEADERS)
-	@echo Creating $@
-	@$(CXX) -c $(CXXFLAGS) $< -o $@ 
-
-$(MOD_OBJ)/%.cpp.o: $(MOD_SRC)/%.cpp $(MODHEADERS)
-	@echo Creating $@
-	@$(CXX) -c $(CXXFLAGS) $< -o $@ 
+	@$(CXX) -T $(modlinker) -o $@ $(wildcard $(MOD_SRC)/modules/$*/*.cpp) $(wildcard $(MOD_SRC)/modules/$*/*.s) $(wildcard $(MOD_SRC)/*.cpp) $(wildcard $(MOD_SRC)/*.s) $(LIB) -z max-page-size=0x1000 $(CXXFLAGS)

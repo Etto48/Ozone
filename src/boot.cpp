@@ -1,5 +1,7 @@
 #include "include/boot.h"
 
+
+
 extern "C" void kmain()
 {
     //clear(0x07);
@@ -19,7 +21,7 @@ extern "C" void kmain()
 
         video::init((video::color_t*)(uint64_t)boot_info::mbi.framebuffer_addr,boot_info::mbi.framebuffer_width,boot_info::mbi.framebuffer_height);
         printing::init();
-        printf("\e[37;40m\e[2J\e[H\n");
+        printf("\e[37;40m\e[2J\e[H");
         video::draw_image(ozone_logo[0],{256,256},video::get_screen_size()/2-video::v2i{256,256}/2);
         //printf("\e[35mFramebuffer found at 0x%p, %udx%ud colors:%ud\e[0m\n",boot_info::mbi.framebuffer_addr,boot_info::mbi.framebuffer_width,boot_info::mbi.framebuffer_height,boot_info::mbi.framebuffer_palette_num_colors);
     }
@@ -27,7 +29,7 @@ extern "C" void kmain()
     {
         video::init((video::color_t*)(uint64_t)boot_info::mbi.framebuffer_addr,boot_info::mbi.framebuffer_width,boot_info::mbi.framebuffer_height);
         printing::init();
-        printf("\e[37;40m\e[2J\e[H\n");
+        printf("\e[37;40m\e[2J\e[H");
         multitasking::abort("No framebuffer found");
         //printf("\e[31mFramebuffer not found\e[0m\n");
     }
@@ -49,39 +51,13 @@ extern "C" void kmain()
     {
         printf("  RSDP checksum validated\n");
     }*/
-    acpi::find_apic();
+    //acpi::find_apic();
     interrupt::init_interrupts();
     //printf("\e[32mInterrupts initialized\e[0m\n");
     multitasking::init_process_array();
     //printf("\e[32mProcess array initialized\e[0m\n");
 
     multitasking::create_process((void *)kernel::init, &paging::identity_l4_table, interrupt::privilege_level_t::system, multitasking::MAX_PROCESS_NUMBER,nullptr);
-
-    if (boot_info::mbi.flags & MULTIBOOT_INFO_MODS && boot_info::mbi.mods_count >= 1)
-    {
-        debug::log(debug::level::inf,"%ud module(s) found", boot_info::mbi.mods_count);
-        for (uint64_t mn = 0; mn < boot_info::mbi.mods_count; mn++)
-        {
-            auto &modr = ((multiboot_module_t *)(uint64_t)boot_info::mbi.mods_addr)[mn];
-            auto ptrie = paging::create_paging_trie();
-            auto level = memory::memcmp((void*)(uint64_t)modr.cmdline,"shell",4) ? interrupt::privilege_level_t::user : interrupt::privilege_level_t::system;
-            multitasking::mapping_history_t* mh;
-            auto entry = modules::load_module(&modr, ptrie, level, mh);
-            if (entry == nullptr)
-                debug::log(debug::level::wrn,"  \e[31mModule %uld failed to load\e[0m\n", mn);
-            else
-            {
-                auto pid = multitasking::create_process((void *)entry, ptrie, level, multitasking::MAX_PROCESS_NUMBER, mh);
-                debug::log(debug::level::wrn,"  Module %s(%uld) loaded as %s process %uld\n", (uint64_t)modr.cmdline, mn,
-                    level==interrupt::privilege_level_t::system?"system":"user", pid);
-            }
-        }
-    }
-    else
-    {
-        debug::log(debug::level::wrn,"\e[31mcNo modules found\e[0m\n");
-    }
-    
-
+    //fork_modules();
     ozone::user::sys_call_n(0); //create an interrupt to switch to multitasking mode
 }

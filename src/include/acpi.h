@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "memory.h"
 #include "debug.h"
+#include "cpu.h"
 
 namespace acpi
 {
@@ -183,5 +184,5 @@ namespace acpi
     extern bool rsdp_is_valid;
 
     void init();
-    void find_apic();
+    void init_apic();
 };

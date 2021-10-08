@@ -31,6 +31,7 @@ namespace apic
     extern volatile uint32_t* EOIR;
 
     void init();
+	void to_ioapic(void* ioapicbase);
     void reset();
 
     uint32_t in(uint8_t off);

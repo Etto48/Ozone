@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "paging.h"
 #include "interrupt.h"
+#include "debug.h"
 
 namespace modules
 {

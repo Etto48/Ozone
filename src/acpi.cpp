@@ -67,11 +67,13 @@ namespace acpi
                 if (memory::memcmp(((ACPISDT_header *)(uint64_t)sdt_pointer_array[i])->signature, "FACP", 4))
                 {
                     debug::log(debug::level::inf, "FACP found");
+                    printf("FACP found\n");
                     fadt = (FADT *)(uint64_t)sdt_pointer_array[i];
                 }
                 else if (memory::memcmp(((ACPISDT_header *)(uint64_t)sdt_pointer_array[i])->signature, "APIC", 4))
                 {
                     debug::log(debug::level::inf, "MADT found");
+                    printf("MADT found\n");
                     madt = (MADT *)(uint64_t)sdt_pointer_array[i];
                 }
                 if(madt&&fadt)
@@ -88,69 +90,83 @@ namespace acpi
                 if (memory::memcmp(((ACPISDT_header *)sdt_pointer_array[i])->signature, "FACP", 4))
                 {
                     debug::log(debug::level::inf, "FACP found");
+                    printf("FACP found\n");
                     fadt = (FADT *)sdt_pointer_array[i];
                 }
                 else if (memory::memcmp(((ACPISDT_header *)sdt_pointer_array[i])->signature, "APIC", 4))
                 {
                     debug::log(debug::level::inf, "MADT found");
+                    printf("MADT found\n");
                     madt = (MADT *)sdt_pointer_array[i];
                 }
             }
         }
     }
 
-    void find_apic()
+    void init_apic()
     {
-        for(auto madt_entries_address = ((uint64_t)madt+sizeof(madt));madt_entries_address<(uint64_t)madt+madt->h.length;)
+        for(auto madt_entries_address = ((uint64_t)acpi::madt+0x2c);madt_entries_address<(uint64_t)acpi::madt+acpi::madt->h.length;)
         {
             size_t size = 0;
-            switch(((MADT_entry_header*)madt_entries_address)->type)
+            switch(((acpi::MADT_entry_header*)madt_entries_address)->type)
             {
             case 0:
                 debug::log(debug::level::inf,"LAPIC found");
-                //printf("  LAPIC found, ID: %uld\n",(uint64_t)((local_APIC*)madt_entries_address)->APIC_id);
-                size = sizeof(local_APIC);
+                printf("LAPIC found, ID: %uld CPU_ID: %uld\n",(uint64_t)((acpi::local_APIC*)madt_entries_address)->APIC_id,(uint64_t)((acpi::local_APIC*)madt_entries_address)->processor_id);
+                size = sizeof(acpi::local_APIC);
+                {
+                    auto lapic_address = ((acpi::local_APIC*)madt_entries_address);
+                    cpu::cpu_array[lapic_address->processor_id].processor_id = lapic_address->processor_id;
+                    cpu::cpu_array[lapic_address->processor_id].is_present = lapic_address->flags & 0b1 | lapic_address->flags & 0b10;
+                    cpu::cpu_array[lapic_address->processor_id].lapic_id = lapic_address->APIC_id;
+                }
                 break;
             case 1:
                 debug::log(debug::level::inf,"IOAPIC found");
-                //printf("  IOAPIC found\n");
-                size = sizeof(io_APIC);
+                printf("IOAPIC found\n");
+                size = sizeof(acpi::io_APIC);
+                {
+                    auto ioapic_address = ((acpi::io_APIC*)madt_entries_address);
+                    //apic::to_ioapic((void*)(uint64_t)(ioapic_address->io_APIC_address));
+                }
                 break;
             case 2:
                 debug::log(debug::level::inf,"IOAPIC ISO found");
-                //printf("  IOAPIC ISO found\n");
-                size = sizeof(io_APIC_interrupt_source_override);
+                printf("IOAPIC ISO found\n");
+                size = sizeof(acpi::io_APIC_interrupt_source_override);
                 break;
             case 3:
                 debug::log(debug::level::inf,"IOAPIC NMI IS found");
-                //printf("  IOAPIC NMI IS found\n");
-                size = sizeof(io_APIC_nmi_source);
+                printf("IOAPIC NMI IS found\n");
+                size = sizeof(acpi::io_APIC_nmi_source);
                 break;
             case 4:
                 debug::log(debug::level::inf,"LAPIC NMI found");
-                //printf("  LAPIC NMI found\n");
-                size = sizeof(local_APIC_nmi_source);
+                printf("LAPIC NMI found\n");
+                size = sizeof(acpi::local_APIC_nmi_source);
                 break;
             case 5:
                 debug::log(debug::level::inf,"LAPIC AO found");
-                //printf("  LAPIC AO found\n");
-                size = sizeof(local_APIC_address_override);
+                printf("LAPIC AO found\n");
+                size = sizeof(acpi::local_APIC_address_override);
                 break;
             case 9:
                 debug::log(debug::level::inf,"Lx2APIC found");
-                //printf("  Lx2APIC found\n");
-                size = sizeof(local_x2APIC);
+                printf("Lx2APIC found\n");
+                size = sizeof(acpi::local_x2APIC);
                 break;
             default:    
-                debug::log(debug::level::wrn,"Unknown MADT entry type %ud",((MADT_entry_header*)madt_entries_address)->type);
-                //printf("  Unknown MADT entry type %ud\n",((MADT_entry_header*)madt_entries_address)->type);
+                debug::log(debug::level::wrn,"Unknown MADT entry type %ud",((acpi::MADT_entry_header*)madt_entries_address)->type);
+                printf("Unknown MADT entry type %ud\n",((acpi::MADT_entry_header*)madt_entries_address)->type);
                 goto exit;
                 break;
             }
-            if(((MADT_entry_header*)madt_entries_address)->length==0)
+            if(((acpi::MADT_entry_header*)madt_entries_address)->length==0)
                 break;
-            madt_entries_address += ((MADT_entry_header*)madt_entries_address)->length;
+            madt_entries_address += ((acpi::MADT_entry_header*)madt_entries_address)->length;
         }
+        debug::log(debug::level::inf,"%uld CPU cores found",cpu::get_count());
+        printf("%uld CPU cores found\n",cpu::get_count());
     exit:
         return;
     }

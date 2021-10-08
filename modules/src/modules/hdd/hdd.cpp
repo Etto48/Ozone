@@ -72,8 +72,5 @@ void start_cmd(uint32_t lba, uint8_t n, uint8_t cmd)
 
 int main()
 {
-    
-    while (true)
-    {
-    }
+	return 0;
 }

@@ -645,8 +645,8 @@ namespace multitasking
 
             auto stack_base = (void *)((uint64_t)create_stack(process_id, level) - 16);
 
-            auto last_trie = paging::get_current_trie();
-            paging::set_current_trie(paging_root);
+            //auto last_trie = paging::get_current_trie();
+            //paging::set_current_trie(paging_root);
             //interrupt::context_t* context = (interrupt::context_t*)((uint64_t)stack_base-sizeof(interrupt::context_t));
             interrupt::context_t context;
             context.ss = level == interrupt::privilege_level_t::user ? interrupt::GDT_USER_DATA_SEGMENT : 0;
@@ -662,14 +662,14 @@ namespace multitasking
                     context.r8 = context.r9 = context.r10 = context.r11 = context.r12 = context.r13 = context.r14 = context.r15 = context.fs = context.gs = context.int_num = context.int_info = 0;
 
             //tricks the function to call automatically user::exit() it reaches the end (it can cause a crash in user code we need to fix this later)
-            *(void **)((uint64_t)stack_base) = (void *)fin;
+            *(void**)(paging::virtual_to_phisical((void *)(uint64_t)stack_base,paging_root)) = (void *)fin;
 
             process_array[process_id].context = context;
             
             process_array[process_id].process_heap = heap{create_heap(process_id,level), heap_pages * 0x1000};//1MiB
             process_array[process_id].next = nullptr;
 
-            paging::set_current_trie(last_trie);
+            //paging::set_current_trie(last_trie);
             //debug::log(debug::level::inf, "Process %uld created, level: %s, father_id: %uld", process_id, level == interrupt::privilege_level_t::user ? "user" : "system", father_id);
             process_count++;
             add_ready(process_id);
@@ -994,6 +994,15 @@ namespace multitasking
         paging::set_current_trie(process_array[execution_index].paging_root); //change cr3
 
         return &process_array[execution_index].context;
+    }
+
+    void cli()
+    {
+        asm volatile("cli");
+    }
+    void sti()
+    {
+        asm volatile("sti");
     }
 
 };

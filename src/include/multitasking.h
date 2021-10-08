@@ -237,6 +237,10 @@ namespace multitasking
     void save_state(interrupt::context_t *context);
     //runs the scheduler, changes cr3 and returns the stack index
     interrupt::context_t *load_state();
+    //disable interrupts
+    void cli();
+    //enables interrupts
+    void sti();
 
 };
 #include "clock.h"

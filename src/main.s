@@ -110,7 +110,8 @@ setup_page_tables:
         cmp $512, %ecx
         jne .fill_loop
     ret
-
+    
+.global enable_paging
 enable_paging:
     //pass trie location
     lea page_table_l4, %eax

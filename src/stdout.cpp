@@ -17,9 +17,9 @@ namespace stdout
     {
         if(req!=check_handle())
         {
+            debug::log(debug::level::inf,"Process %uld requested STDOUT handle",req);
             multitasking::acquire_semaphore(stdout_mutex);
             last_handle_request = req;
-            debug::log(debug::level::inf,"Process %uld requested STDOUT handle",req);
         }
         auto ss = video::get_screen_size();
         last_terminal_size = {uint16_t(ss.x/8),uint16_t(ss.y/8)};   
@@ -29,8 +29,8 @@ namespace stdout
     {
         if(req==check_handle())
         {
-            multitasking::release_semaphore(stdout_mutex);
             debug::log(debug::level::inf,"Process %uld released STDOUT handle",req);
+            multitasking::release_semaphore(stdout_mutex);
         }
         last_handle_request = ozone::INVALID_PROCESS;
     }

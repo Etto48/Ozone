@@ -17,17 +17,17 @@ namespace stdin
     {
         if(req!=check_handle())
         {
+            debug::log(debug::level::inf,"Process %uld requested STDIN handle",req);
             multitasking::acquire_semaphore(stdin_mutex);
             last_handle_request = req;
-            debug::log(debug::level::inf,"Process %uld requested STDIN handle",req);
         }
     }
     void release_handle(ozone::pid_t req)
     {
         if(req==check_handle())
         {
-            multitasking::release_semaphore(stdin_mutex);
             debug::log(debug::level::inf,"Process %uld released STDIN handle",req);
+            multitasking::release_semaphore(stdin_mutex);
         }
         last_handle_request = ozone::INVALID_PROCESS;
     }

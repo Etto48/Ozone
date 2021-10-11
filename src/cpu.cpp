@@ -40,19 +40,20 @@ namespace cpu
         return ret;
     }
     void start_cores()
-    {
+    {   
+        debug::log(debug::level::inf,"-Starting %ud more CPU cores",cpu::get_count()-1);
+        printf("-Starting %ud more CPU cores\n",cpu::get_count()-1);
+
+        
         multitasking::cli();
         aprunning = 0;
         bspdone = 0;
         //copy ap_trampoline to destination address
         memory::memcpy((void*)0x8000,(void*)&ap_trampoline,4096);
         auto bspid = apic::get_bspid();
-
-        debug::log(debug::level::inf,"-Starting %ud more CPU cores",cpu::get_count()-1);
-        printf("-Starting %ud more CPU cores\n",cpu::get_count()-1);
         for(auto& x: cpu_array)
         {
-            if(x.is_present)
+            if(x.is_present && !x.is_booted)
             {
                 if(x.lapic_id==bspid)
                 {
@@ -60,19 +61,25 @@ namespace cpu
                     continue;
                 }
                 
-                apic::send_INIT(x.processor_id);
+                apic::send_INIT(x.lapic_id);
                 multitasking::sti();
                 clock::mwait(10);
                 multitasking::cli();
                 for(uint8_t j=0;j<2;j++)
                 {
-                    apic::send_SIPI(x.processor_id,0x000608);
+                    apic::send_SIPI(x.lapic_id,0x000608);
                 }
             }
         }
         bspdone = 1;
+        
         multitasking::sti();
-        clock::mwait(100);
+        #define N_TRY 10
+
+        for(uint64_t t = 0;cpu::get_count()-1!=aprunning && t<N_TRY;t++)
+        {
+            clock::mwait(10);
+        }
         if(cpu::get_count()-1==aprunning)
         {
             debug::log(debug::level::inf,"-Successfully started %ud CPU cores",aprunning);
@@ -83,7 +90,12 @@ namespace cpu
             debug::log(debug::level::err,"-Error starting CPU cores, only %ud/%ud started", aprunning,cpu::get_count()-1);
             printf("-Error starting CPU cores, only %ud/%ud started\n",aprunning,cpu::get_count()-1);
         }
-        clock::mwait(100);
+
+        
+        for(uint64_t t = 0;cpu::get_count()!=cpu::get_booted_count() && t<N_TRY;t++)
+        {
+            clock::mwait(10);
+        }
         auto booted_count = cpu::get_booted_count();
         if(cpu::get_count()==booted_count)
         {
@@ -94,6 +106,13 @@ namespace cpu
         {
             debug::log(debug::level::err,"-Error bringing CPU cores to 64b mode, only %uld/%uld successful cores", booted_count-1,cpu::get_count()-1);
             printf("-Error bringing CPU cores to 64b mode, only %uld/%uld successful cores\n",booted_count-1,cpu::get_count()-1);
+            for(auto& x:cpu_array)
+            {
+                if(x.is_present && ! x.is_booted)
+                {
+                    printf("--Missing CPU core ID:%ud, LAPIC_ID:%ud\n",x.processor_id,x.lapic_id);
+                }
+            }
         }
         
     }

@@ -5,7 +5,7 @@
 #include "heap.h"
 
 #define MAX_CPU_COUNT 32
-#define AP_KERNEL_STACK_SIZE (1024 * 1024 * 16)
+#define AP_KERNEL_STACK_SIZE (1024 * 1024)
 
 namespace cpu
 {

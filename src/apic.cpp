@@ -6,8 +6,10 @@ namespace apic
     volatile uint32_t *IOREGSEL = reinterpret_cast<uint32_t *>(0x00);
     volatile uint32_t *IOWIN = reinterpret_cast<uint32_t *>(0x10);
 
+    volatile uint32_t *ESR = reinterpret_cast<uint32_t *>(0x280);
     volatile uint32_t *ICRL = reinterpret_cast<uint32_t *>(0x300);
     volatile uint32_t *ICRH = reinterpret_cast<uint32_t *>(0x310);
+
     bool PIC8259_compatibility_mode = false;
     void init()
     {
@@ -22,6 +24,7 @@ namespace apic
         EOIR = (uint32_t*)((uint64_t)EOIR + (uint64_t)lapicbase);
         ICRL = (uint32_t*)((uint64_t)ICRL + (uint64_t)lapicbase);
         ICRH = (uint32_t*)((uint64_t)ICRH + (uint64_t)lapicbase);
+        ESR = (uint32_t*)((uint64_t)ESR + (uint64_t)lapicbase);
     }
     void to_ioapic(void* ioapicbase,void* lapicbase)
     {
@@ -181,28 +184,29 @@ namespace apic
         asm volatile ("mov $1, %%eax; cpuid; shrl $24, %%ebx;": "=b"(bspid) : : );
         return bspid;
     }
-    void send_INIT(uint8_t processor_id)
+    void send_INIT(uint8_t lapic_id)
     {
-        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+        *ESR = 0;
+        *ICRH = (*ICRH & 0x00ffffff) | (lapic_id << 24);         // select AP
 	    *ICRL = (*ICRL & 0xfff00000) | 0x00C500;          // trigger INIT IPI
         do { 
             asm volatile ("pause" : : : "memory"); 
         }while(*ICRL & (1 << 12));         // wait for delivery
         //DEASSERT
-        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+        *ICRH = (*ICRH & 0x00ffffff) | (lapic_id << 24);         // select AP
 	    *ICRL = (*ICRL & 0xfff00000) | 0x008500; 
         do { 
             asm volatile ("pause" : : : "memory"); 
         }while(*ICRL & (1 << 12));         // wait for delivery
     }
-	void send_SIPI(uint8_t processor_id,uint32_t starting_page_number)
+	void send_SIPI(uint8_t lapic_id,uint32_t starting_page_number)
     {
-        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+        *ESR = 0;
+        *ICRH = (*ICRH & 0x00ffffff) | (lapic_id << 24);         // select AP
 	    *ICRL = (*ICRL & 0xfff0f800) | starting_page_number;          // trigger STARTUP IPI for 0800:0000
-        for(uint64_t i = 0;i<100000; i++)
-        {
-            asm volatile("nop");
-        }
+        asm volatile("sti");
+        clock::mwait(1);
+        asm volatile("cli");
         do { 
             asm volatile ("pause" : : : "memory"); 
         }while(*ICRL & (1 << 12));         // wait for delivery

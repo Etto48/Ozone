@@ -37,7 +37,7 @@ _L8060:
     movl    %ebx, %edi
     # set up 32k stack, one for each core. It is important that all core must have its own stack
     shll    $15, %ebx
-    movl    stack_top, %esp
+    movl    ap_tmp_stack, %esp
     subl    %ebx, %esp
     pushl   %edi
     # spinlock, wait for the BSP to finish

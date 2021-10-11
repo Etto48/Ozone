@@ -2,6 +2,11 @@
 #include <stdint.h>
 #include <io.h>
 
+namespace clock
+{
+	void mwait(uint64_t milliseconds);
+};
+
 namespace apic
 {
     const uint32_t DEST_MSK = 0xFF000000; // destination field mask

@@ -50,3 +50,7 @@ h:    #we should not get there but whatever
     hlt
     jmp h
 
+.section .bss
+.global ap_tmp_stack
+ap_tmp_stack:
+.skip 0x1000 * (32/4) * 32

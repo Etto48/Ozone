@@ -5,6 +5,12 @@ namespace cpu
     uint8_t bspdone = 0;
     volatile uint8_t aprunning = 0;
 
+    uint32_t sizeof_cpu_descriptor = sizeof(cpu_descriptor_t);
+    uint32_t cpu_array_pointer = (uint32_t)(uint64_t)&cpu_array;
+
+    uint32_t gdtr_offset = 3 + sizeof(tss_t) + sizeof(gdt_t);
+    uint32_t stack_base_offset = 3 + sizeof(tss_t) + sizeof(gdt_t) + sizeof(gdtr_t) + 1 + sizeof(kernel_stack_t) - 1;
+
     cpu_descriptor_t cpu_array[MAX_CPU_COUNT];
 
     void init()
@@ -19,6 +25,16 @@ namespace cpu
         for(auto& x: cpu_array)
         {
             if(x.is_present)
+                ret++;
+        }
+        return ret;
+    }
+    uint64_t get_booted_count()
+    {
+        uint64_t ret = 0;
+        for(auto& x: cpu_array)
+        {
+            if(x.is_booted)
                 ret++;
         }
         return ret;
@@ -38,7 +54,11 @@ namespace cpu
         {
             if(x.is_present)
             {
-                if(x.lapic_id==bspid) continue;
+                if(x.lapic_id==bspid)
+                {
+                    x.is_booted = true;
+                    continue;
+                }
                 
                 apic::send_INIT(x.processor_id);
                 multitasking::sti();
@@ -63,8 +83,21 @@ namespace cpu
             debug::log(debug::level::err,"-Error starting CPU cores, only %ud/%ud started", aprunning,cpu::get_count()-1);
             printf("-Error starting CPU cores, only %ud/%ud started\n",aprunning,cpu::get_count()-1);
         }
+        clock::mwait(100);
+        auto booted_count = cpu::get_booted_count();
+        if(cpu::get_count()==booted_count)
+        {
+            debug::log(debug::level::inf,"-Successfully brought %uld CPU cores to 64b mode",booted_count-1);
+            printf("-Successfully brought %uld CPU cores to 64b mode\n",booted_count-1);
+        }
+        else
+        {
+            debug::log(debug::level::err,"-Error bringing CPU cores to 64b mode, only %uld/%uld successful cores", booted_count-1,cpu::get_count()-1);
+            printf("-Error bringing CPU cores to 64b mode, only %uld/%uld successful cores\n",booted_count-1,cpu::get_count()-1);
+        }
+        
     }
-    uint8_t get_current_id()
+    uint8_t get_current_processor_id()
     {
         auto lapic_id = apic::get_bspid();
         for(auto& x:cpu_array)
@@ -76,5 +109,14 @@ namespace cpu
             }
         }
         return 0xff;
+    }
+    
+    void ap64main()
+    {
+        auto processor_id = get_current_processor_id();
+        cpu_array[processor_id].is_booted = true;
+
+        //here goes the smp code
+        while(1);
     }
 };

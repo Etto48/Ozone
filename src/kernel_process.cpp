@@ -61,7 +61,7 @@ namespace kernel
         fork_modules();
 
 
-        ozone::user::sleep(1000);
+        ozone::user::sleep(2000);
         //end startup operations
         ozone::user::signal(ozone::SIGTERM,startup_loading_anim_id);
         ozone::user::join(startup_loading_anim_id);

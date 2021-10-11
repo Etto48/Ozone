@@ -5,6 +5,9 @@ namespace apic
     volatile uint32_t *EOIR = reinterpret_cast<volatile uint32_t *>(0xB0);
     volatile uint32_t *IOREGSEL = reinterpret_cast<uint32_t *>(0x00);
     volatile uint32_t *IOWIN = reinterpret_cast<uint32_t *>(0x10);
+
+    volatile uint32_t *ICRL = reinterpret_cast<uint32_t *>(0x300);
+    volatile uint32_t *ICRH = reinterpret_cast<uint32_t *>(0x310);
     bool PIC8259_compatibility_mode = false;
     void init()
     {
@@ -14,11 +17,17 @@ namespace apic
         apic::enable_8259();
         apic::remap_8259();
     }
-    void to_ioapic(void* ioapicbase)
+    void set_lapic_base(void* lapicbase)
+    {
+        EOIR = (uint32_t*)((uint64_t)EOIR + (uint64_t)lapicbase);
+        ICRL = (uint32_t*)((uint64_t)ICRL + (uint64_t)lapicbase);
+        ICRH = (uint32_t*)((uint64_t)ICRH + (uint64_t)lapicbase);
+    }
+    void to_ioapic(void* ioapicbase,void* lapicbase)
     {
         IOWIN = (uint32_t*)((uint64_t)IOWIN + (uint64_t)ioapicbase);
         IOREGSEL = (uint32_t*)((uint64_t)IOREGSEL + (uint64_t)ioapicbase);
-        EOIR = (uint32_t*)((uint64_t)EOIR + (uint64_t)ioapicbase);
+        set_lapic_base(lapicbase);
         PIC8259_compatibility_mode = false;
         apic::disable_8259();
         apic::reset();
@@ -30,10 +39,12 @@ namespace apic
             for (uint64_t i = 0; i < IRQ_MAX; i++)
             {
                 apic::write_rth(i, 0);
-                apic::write_rtl(i, MIRQ_BIT | TRGM_BIT);
+                apic::write_rtl(i, 0);
             }
-            apic::set_TRGM(0, false);
-            apic::set_TRGM(2, false);
+            for(uint8_t i = 0;i<16;i++)
+            {
+                apic::set_VECT(i,32+i);
+            }
         }
     }
 
@@ -66,6 +77,24 @@ namespace apic
         apic::out(RTO + irq * 2, w);
     }
 
+    void set_DELM(uint8_t irq, uint8_t delm)
+    {
+        if (!PIC8259_compatibility_mode)
+        {
+            auto work = apic::read_rth(irq);
+            work = (work & ~apic::DELM_MSK) | (delm << apic::DELM_SHF);
+            apic::write_rth(irq, work);
+        }
+    }
+    void set_DSTM(uint8_t irq, bool v)
+    {
+        if (!PIC8259_compatibility_mode)
+        {
+            auto work = apic::read_rtl(irq);
+            work = v ? (work | DSTM_BIT) : (work & ~DSTM_BIT);
+            apic::write_rtl(irq, work);
+        }
+    }
     void set_DEST(uint8_t irq, uint8_t dest)
     {
         if (!PIC8259_compatibility_mode)
@@ -144,6 +173,39 @@ namespace apic
             work |= vec;
             apic::write_rtl(irq, work);
         }
+    }
+
+    uint8_t get_bspid()
+    {
+        uint8_t bspid = 0;
+        asm volatile ("mov $1, %%eax; cpuid; shrl $24, %%ebx;": "=b"(bspid) : : );
+        return bspid;
+    }
+    void send_INIT(uint8_t processor_id)
+    {
+        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+	    *ICRL = (*ICRL & 0xfff00000) | 0x00C500;          // trigger INIT IPI
+        do { 
+            asm volatile ("pause" : : : "memory"); 
+        }while(*ICRL & (1 << 12));         // wait for delivery
+        //DEASSERT
+        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+	    *ICRL = (*ICRL & 0xfff00000) | 0x008500; 
+        do { 
+            asm volatile ("pause" : : : "memory"); 
+        }while(*ICRL & (1 << 12));         // wait for delivery
+    }
+	void send_SIPI(uint8_t processor_id,uint32_t starting_page_number)
+    {
+        *ICRH = (*ICRH & 0x00ffffff) | (processor_id << 24);         // select AP
+	    *ICRL = (*ICRL & 0xfff0f800) | starting_page_number;          // trigger STARTUP IPI for 0800:0000
+        for(uint64_t i = 0;i<100000; i++)
+        {
+            asm volatile("nop");
+        }
+        do { 
+            asm volatile ("pause" : : : "memory"); 
+        }while(*ICRL & (1 << 12));         // wait for delivery
     }
 
     constexpr uint64_t ISR_SIZE = 32;

@@ -56,8 +56,10 @@ namespace kernel
         auto startup_loading_anim_id = ozone::user::fork(startup_loading_anim);
         //startup operations    
         kb::init();
-        acpi::init_apic();  
+        acpi::init_apic(); 
+        cpu::start_cores(); 
         fork_modules();
+
 
         ozone::user::sleep(1000);
         //end startup operations

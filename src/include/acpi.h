@@ -152,9 +152,10 @@ namespace acpi
     struct io_APIC_nmi_source//3
     {
         MADT_entry_header h;
-        uint8_t ACPI_processor_id;
+        uint8_t NMI_source;
+        uint8_t reserved;
         uint16_t flags;
-        uint8_t LINT;
+        uint32_t global_system_interrupt;
     }__attribute__((packed));
     struct local_APIC_nmi_source//4
     {

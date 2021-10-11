@@ -7,6 +7,8 @@ namespace clock
     constexpr uint16_t CLOCK_1 = 0x41;
     constexpr uint16_t CLOCK_2 = 0x42;
 
+    volatile uint64_t clock_ticks = 0;
+
     struct process_timer_t
     {
         ozone::pid_t id;
@@ -56,6 +58,7 @@ namespace clock
     {
         //print_list();
         multitasking::scheduler_timer_ticks++;
+        clock_ticks++;
         if (timer_list)
         {
             timer_list->ticks--;
@@ -161,5 +164,10 @@ namespace clock
         //add_timer_recursive(multitasking::execution_index,ticks,timer_list);
         //print_list();
         multitasking::drop();
+    }
+    void mwait(uint64_t milliseconds)
+    {
+        auto target = clock_ticks+milliseconds;
+        while(clock_ticks<target);
     }
 };

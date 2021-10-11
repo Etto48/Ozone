@@ -122,7 +122,7 @@ namespace multitasking
     
 
     extern volatile uint64_t scheduler_timer_ticks;
-    constexpr uint64_t timesharing_interval = 10;
+    constexpr uint64_t timesharing_interval = 15;
 
     constexpr uint64_t stack_pages = 512 * 10; //max stack size
     constexpr uint64_t system_stack_pages = 64;

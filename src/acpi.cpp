@@ -101,18 +101,26 @@ namespace acpi
                 }
             }
         }
+        if(fadt)
+        {
+            debug::log(debug::level::inf,"System Control Interrupt: %ud",fadt->SCI_Interrupt);
+            char devt_strings[][20]={"Unspecified","Desktop","Mobile","Workstation","Enterprise Sever","SOHO Server","Aplliance PC","Performance Server","Reserved"};
+            debug::log(debug::level::inf,"Device Type: %s",devt_strings[fadt->PreferredPowerManagementProfile]);
+        }
     }
 
     void init_apic()
     {
+        debug::log(debug::level::inf,"APIC");
+        printf("APIC\n");
         for(auto madt_entries_address = ((uint64_t)acpi::madt+0x2c);madt_entries_address<(uint64_t)acpi::madt+acpi::madt->h.length;)
         {
             size_t size = 0;
             switch(((acpi::MADT_entry_header*)madt_entries_address)->type)
             {
             case 0:
-                debug::log(debug::level::inf,"LAPIC found");
-                printf("LAPIC found, ID: %uld CPU_ID: %uld\n",(uint64_t)((acpi::local_APIC*)madt_entries_address)->APIC_id,(uint64_t)((acpi::local_APIC*)madt_entries_address)->processor_id);
+                debug::log(debug::level::inf,"-LAPIC found, ID: %uld, CPU_ID: %uld",(uint64_t)((acpi::local_APIC*)madt_entries_address)->APIC_id,(uint64_t)((acpi::local_APIC*)madt_entries_address)->processor_id);
+                printf("-LAPIC found, ID: %uld, CPU_ID: %uld\n",(uint64_t)((acpi::local_APIC*)madt_entries_address)->APIC_id,(uint64_t)((acpi::local_APIC*)madt_entries_address)->processor_id);
                 size = sizeof(acpi::local_APIC);
                 {
                     auto lapic_address = ((acpi::local_APIC*)madt_entries_address);
@@ -122,42 +130,78 @@ namespace acpi
                 }
                 break;
             case 1:
-                debug::log(debug::level::inf,"IOAPIC found");
-                printf("IOAPIC found\n");
+                debug::log(debug::level::inf,"-IOAPIC found");
+                printf("-IOAPIC found\n");
                 size = sizeof(acpi::io_APIC);
                 {
                     auto ioapic_address = ((acpi::io_APIC*)madt_entries_address);
-                    //apic::to_ioapic((void*)(uint64_t)(ioapic_address->io_APIC_address));
+    
+                    apic::to_ioapic((void*)(uint64_t)(ioapic_address->io_APIC_address),(void*)(uint64_t)(madt->local_apic_address));
+                    //debug::log(debug::level::inf,"READ LAPIC addr %p");
+                    //printf("READ APIC ver %x\n",apic::in(1));
                 }
                 break;
             case 2:
-                debug::log(debug::level::inf,"IOAPIC ISO found");
-                printf("IOAPIC ISO found\n");
                 size = sizeof(acpi::io_APIC_interrupt_source_override);
+                {
+                    auto ioapiciso_address = ((acpi::io_APIC_interrupt_source_override*)madt_entries_address);
+                    debug::log(debug::level::inf,"-IOAPIC ISO found: %uld -> %uld",(uint64_t)ioapiciso_address->IRQ_source,(uint64_t)ioapiciso_address->global_system_interrupt);
+                    printf("-IOAPIC ISO found: %uld -> %uld\n",(uint64_t)ioapiciso_address->IRQ_source,(uint64_t)ioapiciso_address->global_system_interrupt);
+                    apic::set_VECT(ioapiciso_address->global_system_interrupt,interrupt::ISR_SIZE+ioapiciso_address->IRQ_source);
+                    if(ioapiciso_address->flags & 2)
+                    {
+                        apic::set_IPOL(ioapiciso_address->global_system_interrupt,true);
+                        debug::log(debug::level::inf,"--Interrupt %ud set to active low",ioapiciso_address->global_system_interrupt);
+                    }
+                    if(ioapiciso_address->flags & 8)
+                    {
+                        apic::set_TRGM(ioapiciso_address->global_system_interrupt,true);
+                        debug::log(debug::level::inf,"--Interrupt %ud set to level triggered",ioapiciso_address->global_system_interrupt);
+                    }
+                }
                 break;
             case 3:
-                debug::log(debug::level::inf,"IOAPIC NMI IS found");
-                printf("IOAPIC NMI IS found\n");
                 size = sizeof(acpi::io_APIC_nmi_source);
+                {
+                    auto ioapicnmis_address = ((acpi::io_APIC_nmi_source*)madt_entries_address);
+                    debug::log(debug::level::inf,"-IOAPIC NMIS found, NMI_source: %ud, GSI: %ud",ioapicnmis_address->NMI_source,ioapicnmis_address->global_system_interrupt);
+                    printf("-IOAPIC NMIS found, NMI_source: %ud, GSI: %ud\n",ioapicnmis_address->NMI_source,ioapicnmis_address->global_system_interrupt);
+                    apic::set_DELM(ioapicnmis_address->global_system_interrupt,0b100);
+                    if(ioapicnmis_address->flags & 2)
+                    {
+                        apic::set_IPOL(ioapicnmis_address->global_system_interrupt,true);
+                        debug::log(debug::level::inf,"--Interrupt %ud set to active low",ioapicnmis_address->global_system_interrupt);
+                    }
+                    if(ioapicnmis_address->flags & 8)
+                    {
+                        apic::set_TRGM(ioapicnmis_address->global_system_interrupt,true);
+                        debug::log(debug::level::inf,"--Interrupt %ud set to level triggered",ioapicnmis_address->global_system_interrupt);
+                    }
+
+                }
                 break;
             case 4:
-                debug::log(debug::level::inf,"LAPIC NMI found");
-                printf("LAPIC NMI found\n");
+                debug::log(debug::level::inf,"-LAPIC NMI found");
+                printf("-LAPIC NMI found\n");
                 size = sizeof(acpi::local_APIC_nmi_source);
                 break;
             case 5:
-                debug::log(debug::level::inf,"LAPIC AO found");
-                printf("LAPIC AO found\n");
+                debug::log(debug::level::inf,"-LAPIC AO found");
+                printf("-LAPIC AO found\n");
                 size = sizeof(acpi::local_APIC_address_override);
+                {
+                    auto lapicao_address = ((acpi::local_APIC_address_override*)madt_entries_address);
+                    apic::set_lapic_base((void*)lapicao_address->local_APIC_phisical_address);
+                }
                 break;
             case 9:
-                debug::log(debug::level::inf,"Lx2APIC found");
-                printf("Lx2APIC found\n");
+                debug::log(debug::level::inf,"-Lx2APIC found");
+                printf("-Lx2APIC found\n");
                 size = sizeof(acpi::local_x2APIC);
                 break;
             default:    
-                debug::log(debug::level::wrn,"Unknown MADT entry type %ud",((acpi::MADT_entry_header*)madt_entries_address)->type);
-                printf("Unknown MADT entry type %ud\n",((acpi::MADT_entry_header*)madt_entries_address)->type);
+                debug::log(debug::level::wrn,"-Unknown MADT entry type %ud",((acpi::MADT_entry_header*)madt_entries_address)->type);
+                printf("-Unknown MADT entry type %ud\n",((acpi::MADT_entry_header*)madt_entries_address)->type);
                 goto exit;
                 break;
             }

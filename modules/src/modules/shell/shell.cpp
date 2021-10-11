@@ -1,5 +1,17 @@
 #include "include/shell.h"
 
+bool s_strcmp(const char* str1, const char* str2,uint64_t maxlen)
+{
+    for(uint64_t i = 0;i<maxlen;i++)
+    {
+        if(str1[i]!=str2[i])
+            return false;
+        else if(str1[i]=='\0')
+            return true;
+    }
+    return true;
+}
+
 void pstr(const char* str,uint64_t color, uint16_t x, uint16_t y,ozone::terminal_size_t t_size)
 {
     for(uint64_t i=0;str[i];i++)
@@ -53,6 +65,8 @@ int main()
         pstr(cmd,wb,0,i+1,screen_size);
         i+=2;
         //execute(cmd);
+        if(s_strcmp("exit",cmd,COMMAND_LENGTH))
+            ozone::user::exit(0);
     }
     
     return 0;

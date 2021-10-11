@@ -13,4 +13,6 @@ namespace clock
 
     uint64_t clean_timer_list();
     void add_timer(uint64_t ticks);
+
+    void mwait(uint64_t milliseconds);
 };

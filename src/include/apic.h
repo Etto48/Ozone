@@ -29,9 +29,12 @@ namespace apic
 	extern volatile uint32_t* IOWIN;
 
     extern volatile uint32_t* EOIR;
+	extern volatile uint32_t* ICRL;
+	extern volatile uint32_t* ICRH;
 
     void init();
-	void to_ioapic(void* ioapicbase);
+	void to_ioapic(void* ioapicbase,void* lapicbase);
+	void set_lapic_base(void* lapicbase);
     void reset();
 
     uint32_t in(uint8_t off);
@@ -43,11 +46,18 @@ namespace apic
     void write_rth(uint8_t irq,uint32_t w);
     void write_rtl(uint8_t irq,uint32_t w);
     
+	void set_DELM(uint8_t irq, uint8_t delm);
+	void set_DSTM(uint8_t irq, bool v);
     void set_DEST(uint8_t irq, uint8_t dest);
     void set_IPOL(uint8_t irq, bool v);
 	void set_MIRQ(uint8_t irq, bool v);
 	void set_TRGM(uint8_t irq, bool v);
 	void set_VECT(uint8_t irq, uint8_t vec);
+
+	uint8_t get_bspid();
+	void send_INIT(uint8_t processor_id);
+	void send_SIPI(uint8_t processor_id,uint32_t starting_page_number);
+
 
 	void remap_8259();
 

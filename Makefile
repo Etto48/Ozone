@@ -1,3 +1,8 @@
+major		:=	3
+minor		:=	1
+patch		:=	1
+version		:=	$(major).$(minor).$(patch)
+
 CXX		:=	g++
 AS			:=	as
 BIN_DIR		:=	bin
@@ -17,10 +22,10 @@ LIBOBJFILES	:=	$(addprefix $(OBJ_DIR)/,$(patsubst %.s,%.s.o,$(notdir $(LIBASFILE
 
 linker		:=	$(SRC_DIR)/linker.ld
 
-CXXFLAGS := -ffreestanding -mcmodel=large -mno-red-zone -nostdlib -lgcc -g -Ilib -static -std=c++2a
+CXXFLAGS := -ffreestanding -mcmodel=large -mno-red-zone -nostdlib -lgcc -g -Ilib -static -std=c++2a -DKERNEL_VERSION=\"$(version)\"
 ASFLAGS := -felf64 -F dwarf -g
 
-version		:=	3.0.0
+
 SO_NAME		:=	ozone-$(version)
 SO			:=	$(BIN_DIR)/$(SO_NAME).bin
 
@@ -89,6 +94,7 @@ clean:
 	@echo Cleaning Object Files
 	@rm -f $(OBJ_DIR)/*.o
 	@rm -f $(BIN_DIR)/*.bin
+	@rm -f $(BIN_DIR)/*.iso
 	@rm -f $(BIN_DIR)/isodir/boot/*.bin
 	@rm -f $(MOD_BIN)/*.bin
 	@rm -f $(OBJ_DIR)/*.a

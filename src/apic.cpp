@@ -201,16 +201,42 @@ namespace apic
     }
 	void send_SIPI(uint8_t lapic_id,uint32_t starting_page_number)
     {
-        *ESR = 0;
-        *ICRH = (*ICRH & 0x00ffffff) | (lapic_id << 24);         // select AP
-	    *ICRL = (*ICRL & 0xfff0f800) | starting_page_number;          // trigger STARTUP IPI for 0800:0000
+        //*ESR = 0;
+        //*ICRH = (*ICRH & 0x00ffffff) | (lapic_id << 24);         // select AP
+	    //*ICRL = (*ICRL & 0xfff0f800) | starting_page_number | 6<<8;          // trigger STARTUP IPI for 0800:0000
+        send_IPI(lapic_id,starting_page_number,ipi::dest_mode::SIPI,false,false,ipi::dest_type::normal);
+        //asm volatile("sti");
+        //clock::mwait(1);
+        //asm volatile("cli");
+        //do { 
+        //    asm volatile ("pause" : : : "memory"); 
+        //}while(*ICRL & (1 << 12));         // wait for delivery
         asm volatile("sti");
         clock::mwait(1);
         asm volatile("cli");
+    }
+    void send_IPI(
+        uint8_t target_lapic_id,
+        uint8_t vector_number,
+        ipi::dest_mode::destination_mode_t destination_mode,
+        bool logical_destination,
+        bool init_level_deassert,
+        ipi::dest_type::destination_type_t destination_type)
+    {
+        *ESR = 0;
+        *ICRH = (*ICRH & 0x00ffffff) | (target_lapic_id << 24);
+        *ICRL = (*ICRL & 0b11111111111100110011000000000000) | 
+            (uint32_t(vector_number) |
+            uint32_t(destination_mode)<<8 |
+            uint32_t(logical_destination?1:0)<<11 | 
+            uint32_t(init_level_deassert?0:1)<<14 | 
+            uint32_t(init_level_deassert?1:0)<<15 | 
+            uint32_t(destination_type)<<18);
         do { 
             asm volatile ("pause" : : : "memory"); 
         }while(*ICRL & (1 << 12));         // wait for delivery
     }
+
 
     constexpr uint64_t ISR_SIZE = 32;
     void remap_8259()

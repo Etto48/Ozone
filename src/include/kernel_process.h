@@ -14,6 +14,7 @@
 #include "loading_animation.h"
 #include "stdout.h"
 #include "kb.h"
+#include "kernel_version.h"
 
 namespace kernel
 {

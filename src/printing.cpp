@@ -757,11 +757,11 @@ bool parse_ansi(const char *&str)
 	{
 		switch (*str)
 		{
-		case 's':
+		case 's'://save
 			saved_curx = curx;
 			saved_cury = cury;
 			break;
-		case 'u':
+		case 'u'://use
 			curx = saved_curx;
 			cury = saved_cury;
 			break;

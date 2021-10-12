@@ -60,10 +60,36 @@ namespace apic
 	void set_VECT(uint8_t irq, uint8_t vec);
 
 	uint8_t get_bspid();
-	void send_INIT(uint8_t processor_id);
-	void send_SIPI(uint8_t processor_id,uint32_t starting_page_number);
+	void send_INIT(uint8_t lapic_id);
+	void send_SIPI(uint8_t lapic_id,uint32_t starting_page_number);
 
-
+	namespace ipi
+	{
+		namespace dest_mode
+		{
+			enum destination_mode_t
+			{
+				normal = 0,
+				lowest_priority = 1,
+				SMI = 2,
+				NMI = 4,
+				INIT = 5,
+				SIPI = 6
+			};
+		};
+		namespace dest_type
+		{
+			enum destination_type_t
+			{
+				normal = 0,
+				self = 1,
+				broadcast = 2,
+				broadcast_not_self = 3
+			};
+		};
+	};
+	void send_IPI(uint8_t target_lapic_id,uint8_t vector_number,ipi::dest_mode::destination_mode_t destination_mode,bool logical_destination,bool init_level_deassert,ipi::dest_type::destination_type_t destination_type);
+	
 	void remap_8259();
 
 	extern "C" void disable_8259();

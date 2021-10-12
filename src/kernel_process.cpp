@@ -52,6 +52,7 @@ namespace kernel
     }
     void startup()
     {
+        printf("\e[s\e[%uld;%uldHVersion: %s\e[u", (video::get_screen_size() / 8).x - string_tools::strlen(KERNEL_VERSION) - 10, (video::get_screen_size() / 8).y - 2,KERNEL_VERSION);
         video::draw_image(ozone_logo[0], {256, 256}, video::get_screen_size() / 2 - video::v2i{256, 256} / 2);
         auto startup_loading_anim_id = ozone::user::fork(startup_loading_anim);
         //startup operations    
@@ -65,7 +66,7 @@ namespace kernel
         //end startup operations
         ozone::user::signal(ozone::SIGTERM,startup_loading_anim_id);
         ozone::user::join(startup_loading_anim_id);
-        printf("\e[%uld;%uldHWelcome to OZONE3 - 64", (video::get_screen_size() / 8 / 2).x - 11, (video::get_screen_size() / 8 / 2).y + 10);
+        printf("\e[%uld;%uldHWelcome to OZONE-%s - 64", (video::get_screen_size() / 8 / 2).x - 11 - string_tools::strlen(KERNEL_VERSION)/2, (video::get_screen_size() / 8 / 2).y + 10,KERNEL_VERSION);
         ozone::user::sleep(1000);
         
         for(uint64_t i = 0;i<8;i++)

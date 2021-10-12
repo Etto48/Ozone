@@ -67,7 +67,7 @@ namespace cpu
                 multitasking::cli();
                 for(uint8_t j=0;j<2;j++)
                 {
-                    apic::send_SIPI(x.lapic_id,0x000608);
+                    apic::send_SIPI(x.lapic_id,0x000008);
                 }
             }
         }

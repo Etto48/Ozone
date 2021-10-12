@@ -47,7 +47,7 @@ GRUB_CFG	:=	$(BIN_DIR)/isodir/boot/grub/grub.cfg
 
 BINARIES	:=	$(SO) $(foreach _mod,$(MODULES),$(MOD_BIN)/$(_mod).bin)
 
-QEMUARGS	:=	-m 4G -serial stdio -smp cpus=8 #-bios /usr/share/ovmf/OVMF.fd
+QEMUARGS	:=	-m 4G -serial stdio -smp cpus=8#-bios /usr/share/ovmf/OVMF.fd
 
 .PHONY: dbg-server dbg clean test disk iso lib all_mods
 

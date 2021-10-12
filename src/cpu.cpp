@@ -74,12 +74,8 @@ namespace cpu
         bspdone = 1;
         
         multitasking::sti();
-        #define N_TRY 10
 
-        for(uint64_t t = 0;cpu::get_count()-1!=aprunning && t<N_TRY;t++)
-        {
-            clock::mwait(10);
-        }
+        clock::mwait(20);
         if(cpu::get_count()-1==aprunning)
         {
             debug::log(debug::level::inf,"-Successfully started %ud CPU cores",aprunning);
@@ -91,11 +87,7 @@ namespace cpu
             printf("-Error starting CPU cores, only %ud/%ud started\n",aprunning,cpu::get_count()-1);
         }
 
-        
-        for(uint64_t t = 0;cpu::get_count()!=cpu::get_booted_count() && t<N_TRY;t++)
-        {
-            clock::mwait(10);
-        }
+        clock::mwait(20);
         auto booted_count = cpu::get_booted_count();
         if(cpu::get_count()==booted_count)
         {
@@ -129,11 +121,16 @@ namespace cpu
         }
         return 0xff;
     }
-    
+
     void ap64main()
     {
         auto processor_id = get_current_processor_id();
         cpu_array[processor_id].is_booted = true;
+
+        cpu_array[processor_id].tss.rsp0 = uint64_t(&(cpu_array[processor_id].kernel_stack)) + sizeof(kernel_stack_t) - 1;
+        asm volatile("movw $0x20, %cx\n or $3, %cx\n ltr %cx\n");
+        
+        //initialize IDT
 
         //here goes the smp code
         while(1);

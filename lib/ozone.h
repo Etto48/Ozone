@@ -5,6 +5,14 @@
 
 namespace ozone
 {
+    #define DECLARE_LOCK(name) volatile int name ## Locked
+    #define LOCK(name) \
+	while (!__sync_bool_compare_and_swap(& name ## Locked, 0, 1)); \
+	__sync_synchronize();
+    #define UNLOCK(name) \
+	__sync_synchronize(); \
+	name ## Locked = 0;
+
     typedef uint64_t shmid_t;
     typedef uint64_t semid_t;
     typedef uint64_t pid_t;

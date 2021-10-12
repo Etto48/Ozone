@@ -3,6 +3,8 @@
 #include "memory.h"
 #include "clock.h"
 #include "heap.h"
+#include "interrupt.h"
+#include <ozone.h>
 
 #define MAX_CPU_COUNT 32
 #define AP_KERNEL_STACK_SIZE (1024 * 1024)
@@ -21,15 +23,15 @@ namespace cpu
     } __attribute__((packed));
     struct tss_t
     {
-        uint16_t reserved0;
-        uint64_t rsp0;
-        uint64_t rsp1;
-        uint64_t rsp2;
-        uint64_t reserved1;
-        uint64_t ist[7];
-        uint64_t reserved2;
-        uint8_t reserved3;
-        uint8_t iopb_offset;
+        uint16_t reserved0 = 0;
+        uint64_t rsp0 = 0;
+        uint64_t rsp1 = 0;
+        uint64_t rsp2 = 0;
+        uint64_t reserved1 = 0;
+        uint64_t ist[7] = {0,0,0,0,0,0,0};
+        uint64_t reserved2 = 0;
+        uint8_t reserved3 = 0;
+        uint8_t iopb_offset = 0;
     }__attribute__((packed));
     struct tss_descriptor_t
     {
@@ -82,7 +84,9 @@ namespace cpu
         gdtr_t gdtr = gdtr_t(&gdt);
         bool is_booted = false;
         kernel_stack_t kernel_stack;
-        multitasking::process_descriptor_t* process_list = nullptr;
+        interrupt::idt_entry_t idt[interrupt::IDT_SIZE];
+        interrupt::idtr_t idtr = {sizeof(interrupt::idt_entry_t)*interrupt::IDT_SIZE - 1,idt};
+        multitasking::process_descriptor_t* running_process = nullptr;
     };
     extern cpu_descriptor_t cpu_array[MAX_CPU_COUNT];
     uint64_t get_count();

@@ -145,7 +145,7 @@ namespace clock
             last = p;
         }
         process_timer_t *new_process_timer = (process_timer_t *)system_heap.malloc(sizeof(process_timer_t));
-        new_process_timer->id = multitasking::execution_index;
+        new_process_timer->id = multitasking::current_execution_index();
         new_process_timer->next = p;
         new_process_timer->ticks = ticks;
         if (p)

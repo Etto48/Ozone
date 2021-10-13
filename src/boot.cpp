@@ -51,12 +51,13 @@ extern "C" void kmain()
     {
         printf("  RSDP checksum validated\n");
     }*/
-    //acpi::find_apic();
+    
     interrupt::init_interrupts();
     //printf("\e[32mInterrupts initialized\e[0m\n");
     multitasking::init_process_array();
     //printf("\e[32mProcess array initialized\e[0m\n");
-
+    acpi::init_apic();
+    cpu::init();
     multitasking::create_process((void *)kernel::init, &paging::identity_l4_table, interrupt::privilege_level_t::system, multitasking::MAX_PROCESS_NUMBER,nullptr);
     //fork_modules();
     ozone::user::sys_call_n(0); //create an interrupt to switch to multitasking mode

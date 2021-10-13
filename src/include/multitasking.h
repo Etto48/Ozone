@@ -4,6 +4,7 @@
 #include "heap.h"
 #include <ozone.h>
 #include "ozone_panic_logo.h"
+#include "cpu.h"
 
 namespace multitasking
 {
@@ -146,7 +147,7 @@ namespace multitasking
     extern semaphore_descriptor_t semaphore_array[MAX_SEMAPHORE_NUMBER];
     extern shm_descriptor_t shm_array[MAX_SHAREDMEMORY_NUMBER];
 
-    extern volatile ozone::pid_t execution_index;
+    //extern volatile ozone::pid_t execution_index;
     extern volatile uint64_t process_count;
 
     extern process_descriptor_t *ready_queue;
@@ -242,6 +243,7 @@ namespace multitasking
     //enables interrupts
     void sti();
 
+    ozone::pid_t& current_execution_index();
 };
 #include "clock.h"
 #include "debug.h"

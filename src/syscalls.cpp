@@ -39,11 +39,12 @@ namespace syscalls
         //rdx = arg0
         //rcx = arg1
         multitasking::save_state(context);
-        context = &multitasking::process_array[multitasking::execution_index].context;
+        auto& ei = multitasking::current_execution_index();
+        context = &multitasking::process_array[ei].context;
         switch (sys_call_number)
         {
         case 0: //get_id
-            context->rax = multitasking::execution_index;
+            context->rax = ei;
             break;
         case 1: //sleep
             clock::add_timer(context->rdx);
@@ -61,13 +62,13 @@ namespace syscalls
             multitasking::release_semaphore(context->rdx);
             break;
         case 6: //fork
-            context->rax = multitasking::fork(multitasking::execution_index,(void (*)())context->rdx, (void (*)())context->rcx);
+            context->rax = multitasking::fork(ei,(void (*)())context->rdx, (void (*)())context->rcx);
             break;
         case 7: //new
-            context->rax = (uint64_t)multitasking::process_array[multitasking::execution_index].process_heap.malloc(context->rdx);
+            context->rax = (uint64_t)multitasking::process_array[ei].process_heap.malloc(context->rdx);
             break;
         case 8: //delete
-            multitasking::process_array[multitasking::execution_index].process_heap.free((void *)context->rdx);
+            multitasking::process_array[ei].process_heap.free((void *)context->rdx);
             break;
         case 9: //join
             context->rax = multitasking::join(context->rdx);
@@ -76,50 +77,50 @@ namespace syscalls
             context->rax = multitasking::driver_call(context->rdx,context->rcx);
             break;
         case 11://signal
-            context->rax = multitasking::signal(multitasking::execution_index,(ozone::signal_t)context->rdx,context->rcx);
+            context->rax = multitasking::signal(ei,(ozone::signal_t)context->rdx,context->rcx);
             break;
         case 12://set_signal_handler
-            multitasking::set_signal_handler(multitasking::execution_index,(ozone::signal_t)context->rdx,(void(*)())context->rcx,(void(*)())context->r8);
+            multitasking::set_signal_handler(ei,(ozone::signal_t)context->rdx,(void(*)())context->rcx,(void(*)())context->r8);
             break;
         case 13://return_from_signal
-            multitasking::return_from_signal(multitasking::execution_index);
+            multitasking::return_from_signal(ei);
             break;
         case 14://shm_get
-            context->rax = multitasking::shm_get(multitasking::execution_index,(uint16_t)context->rdx,context->rcx);
+            context->rax = multitasking::shm_get(ei,(uint16_t)context->rdx,context->rcx);
             break;
         case 15://shm_wait_and_destroy
             multitasking::shm_wait_and_destroy(context->rdx);
             break;
         case 16://shm_attach
-            context->rax = (uint64_t)multitasking::shm_attach(multitasking::execution_index,context->rdx);
+            context->rax = (uint64_t)multitasking::shm_attach(ei,context->rdx);
             break;
         case 17://shm_detach
-            context->rax = multitasking::shm_detach(multitasking::execution_index,context->rdx);
+            context->rax = multitasking::shm_detach(ei,context->rdx);
             break;
         case 18://get_stdout_handle
             { 
-                auto ret = stdout::get_handle(multitasking::execution_index);
+                auto ret = stdout::get_handle(ei);
                 context->rax = ret.x<<16 | ret.y;
             }
             break;
         case 19://release_stdout_handle
-            stdout::release_handle(multitasking::execution_index);
+            stdout::release_handle(ei);
             break;
         case 20://put_char
             stdout::put_char(
-                multitasking::execution_index,
+                ei,
                 (context->rdx & 0x00000000000000FF),
                 context->rcx,
                 (context->rdx & 0x0000FFFF00000000)>>32,
                 (context->rdx & 0xFFFF000000000000)>>(32+16));
         case 21://get_stdin_handle
-            stdin::get_handle(multitasking::execution_index);
+            stdin::get_handle(ei);
             break;
         case 22://release_stdout_handle
-            stdin::release_handle(multitasking::execution_index);
+            stdin::release_handle(ei);
             break;
         case 23://get_char
-            stdin::get_char(multitasking::execution_index);
+            stdin::get_char(ei);
             break;
         default:
             break;
@@ -134,7 +135,8 @@ namespace syscalls
         //r8  = arg2
         //r9  = arg3
         multitasking::save_state(context);
-        context = &multitasking::process_array[multitasking::execution_index].context;
+        auto& ei = multitasking::current_execution_index();
+        context = &multitasking::process_array[ei].context;
         switch (sys_call_number)
         {
         case 0: //set_driver
@@ -144,7 +146,7 @@ namespace syscalls
             for (uint64_t irq = 0; irq < interrupt::IRQ_SIZE; irq++)
             {
                 auto &d = interrupt::io_descriptor_array[irq];
-                if (d.id == multitasking::execution_index)
+                if (d.id == ei)
                 {
                     if(d.is_present)
                     {

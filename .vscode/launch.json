@@ -8,7 +8,7 @@
         "name": "(gdb) QEMU",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceRoot}/bin/ozone-3.0.0.bin",
+        "program": "${workspaceRoot}/bin/ozone-3.1.1.bin",
         "miDebuggerServerAddress": "localhost:3117",
         "args": [],
         "stopAtEntry": false,

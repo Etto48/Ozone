@@ -6,7 +6,10 @@
 #include "interrupt.h"
 #include <ozone.h>
 
-#define MAX_CPU_COUNT 32
+#ifndef MAX_CPU_COUNT
+    #define MAX_CPU_COUNT 32
+#endif
+
 #define AP_KERNEL_STACK_SIZE (1024 * 1024)
 
 namespace cpu
@@ -24,7 +27,7 @@ namespace cpu
     struct tss_t
     {
         uint16_t reserved0 = 0;
-        uint64_t rsp0 = 0;
+        uint64_t rsp0 = 0;//multitasking::system_stack_bottom_address;
         uint64_t rsp1 = 0;
         uint64_t rsp2 = 0;
         uint64_t reserved1 = 0;
@@ -86,9 +89,11 @@ namespace cpu
         kernel_stack_t kernel_stack;
         interrupt::idt_entry_t idt[interrupt::IDT_SIZE];
         interrupt::idtr_t idtr = {sizeof(interrupt::idt_entry_t)*interrupt::IDT_SIZE - 1,idt};
-        multitasking::process_descriptor_t* running_process = nullptr;
+        ozone::pid_t running_process = ozone::INVALID_PROCESS;
     };
     extern cpu_descriptor_t cpu_array[MAX_CPU_COUNT];
+
+    void init();
     uint64_t get_count();
     uint64_t get_booted_count();
     void start_cores();
@@ -101,6 +106,7 @@ namespace cpu
     extern "C" uint32_t gdtr_offset;
     extern "C" uint32_t stack_base_offset;
     extern "C" void ap64main();
+    extern "C" cpu_descriptor_t* get_current_cpu_descriptor_pointer();
     uint8_t get_current_processor_id();
 
 };

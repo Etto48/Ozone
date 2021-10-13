@@ -69,15 +69,18 @@
     pushaq
     mov %rsp, %rdi 
 
-    mov system_common_stack, %rsp
-    #mov tss_stack_pointer, %rsp
-    #mov tss_stack_pointer, %rbp
+    #mov system_common_stack, %rsp
+    call get_current_cpu_descriptor_pointer
+    add stack_base_offset, %rax
+    mov %rax, %rsp
+    mov %rsp, %rbp
+
 .endm
 
 .macro sys_to_proc
 
-    mov sys_stack_base, %r8
-    mov %r8, tss_stack_pointer
+    #mov sys_stack_base, %r8
+    #mov %r8, tss_stack_pointer
     
     mov GS(%rax), %gs
     mov FS(%rax), %fs

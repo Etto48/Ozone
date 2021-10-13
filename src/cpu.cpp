@@ -15,9 +15,7 @@ namespace cpu
 
     void init()
     {
-        auto cpus = get_count();
-        debug::log(debug::level::inf,"%uld CPU cores found",cpus);
-        printf("%uld CPU cores found\n",cpus);
+        cpu_array[cpu::get_current_processor_id()].tss.rsp0=multitasking::system_stack_bottom_address;
     }
     uint64_t get_count()
     {
@@ -127,12 +125,20 @@ namespace cpu
         auto processor_id = get_current_processor_id();
         cpu_array[processor_id].is_booted = true;
 
-        cpu_array[processor_id].tss.rsp0 = uint64_t(&(cpu_array[processor_id].kernel_stack)) + sizeof(kernel_stack_t) - 1;
+        //init TSS
+        cpu_array[processor_id].tss.rsp0 = multitasking::system_stack_bottom_address;
         asm volatile("movw $0x20, %cx\n or $3, %cx\n ltr %cx\n");
         
         //initialize IDT
+        interrupt::load_idt(interrupt::IDTR);
+        multitasking::sti();
 
         //here goes the smp code
         while(1);
+    }
+    
+    cpu_descriptor_t* get_current_cpu_descriptor_pointer()
+    {
+        return &cpu_array[cpu::get_current_processor_id()];
     }
 };

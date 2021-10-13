@@ -45,13 +45,14 @@ namespace debug
 			serial_o(*l++);
 		serial_o((uint8_t)'\t');
 		uint8_t idbuf[10];
-		if (multitasking::execution_index == multitasking::MAX_PROCESS_NUMBER)
+		auto& ei = multitasking::current_execution_index();
+		if (ei == multitasking::MAX_PROCESS_NUMBER)
 		{
 			serial_o((uint8_t)'-');
 		}
 		else
 		{
-			snprintf((char *)idbuf, 10, "%d", multitasking::execution_index);
+			snprintf((char *)idbuf, 10, "%d", ei);
 			l = idbuf;
 			while (*l)
 				serial_o(*l++);

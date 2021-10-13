@@ -171,15 +171,16 @@ namespace interrupt
         {
             //debug::log(debug::level::inf,"Process %uld requested an unmapped address",multitasking::execution_index);
             auto requested_address = paging::get_cr2();
-            if(multitasking::process_array[multitasking::execution_index].level == privilege_level_t::user)
+            auto& ei = multitasking::current_execution_index();
+            if(multitasking::process_array[ei].level == privilege_level_t::user)
             {
                 if((uint64_t)requested_address>multitasking::stack_top_address && (uint64_t)requested_address<multitasking::stack_bottom_address)
                 {//the process requested an address in its stack
-                    solved = multitasking::add_pages(multitasking::execution_index,(void*)((uint64_t)requested_address&~0xfff),paging::flags::RW | paging::flags::USER,1);
+                    solved = multitasking::add_pages(ei,(void*)((uint64_t)requested_address&~0xfff),paging::flags::RW | paging::flags::USER,1);
                 }
                 else
                 {
-                    debug::log(debug::level::wrn,"Process %uld requested memory over the maximum amount possible",multitasking::execution_index);
+                    debug::log(debug::level::wrn,"Process %uld requested memory over the maximum amount possible",ei);
                 }
             }
         }
@@ -202,7 +203,7 @@ namespace interrupt
         }
         if (io_descriptor_array[irq_num].is_present && io_descriptor_array[irq_num].is_ready)
         {
-            multitasking::process_array[io_descriptor_array[irq_num].id].context.rax = multitasking::execution_index;
+            multitasking::process_array[io_descriptor_array[irq_num].id].context.rax = multitasking::current_execution_index();
             multitasking::add_ready(io_descriptor_array[irq_num].id);
         } //only send eoi when the process calls wait_for_interrupt
         else

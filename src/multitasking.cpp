@@ -6,7 +6,7 @@ namespace multitasking
     semaphore_descriptor_t semaphore_array[MAX_SEMAPHORE_NUMBER];
     shm_descriptor_t shm_array[MAX_SHAREDMEMORY_NUMBER];
 
-    volatile ozone::pid_t execution_index = MAX_PROCESS_NUMBER; //for forcing the scheduler to initialize
+    //volatile ozone::pid_t execution_index = MAX_PROCESS_NUMBER; //for forcing the scheduler to initialize
     volatile uint64_t process_count = 0;
 
     process_descriptor_t *ready_queue = nullptr;
@@ -111,7 +111,7 @@ namespace multitasking
         semaphore_array[id].count = starting_count;
         semaphore_array[id].waiting_list_head = nullptr;
         semaphore_array[id].waiting_list_tail = nullptr;
-        semaphore_array[id].creator_id = execution_index;
+        semaphore_array[id].creator_id = current_execution_index();
         return id;
     }
 
@@ -122,7 +122,7 @@ namespace multitasking
             semaphore_array[semaphore_id].count--;
             if (semaphore_array[semaphore_id].count < 0) //move the current process into the waiting list
             {
-                auto to_add = execution_index;
+                auto to_add = current_execution_index();
                 drop();
                 add_to_list(to_add, semaphore_array[semaphore_id].waiting_list_head, semaphore_array[semaphore_id].waiting_list_tail);
             }
@@ -177,15 +177,16 @@ namespace multitasking
     void exit(uint64_t ret)
     {
         //debug::log(debug::level::inf, "Process %uld returned with code %uld", multitasking::execution_index, ret);
-        while (process_array[execution_index].waiting_head)
+        auto& ei = current_execution_index();
+        while (process_array[ei].waiting_head)
         {
             auto join_process = pop_from_list(
-                process_array[execution_index].waiting_head,
-                process_array[execution_index].waiting_tail);
+                process_array[ei].waiting_head,
+                process_array[ei].waiting_tail);
             process_array[join_process].context.rax = ret;
             add_ready(join_process);
         }
-        destroy_process(multitasking::execution_index);
+        destroy_process(ei);
         drop(); //just to be sure
     }
 
@@ -204,8 +205,9 @@ namespace multitasking
 
     uint64_t join(ozone::pid_t pid)
     {
+        auto& ei = current_execution_index();
         bool permission_accepted = false;
-        if (process_array[execution_index].level == interrupt::privilege_level_t::system || process_array[pid].level == interrupt::privilege_level_t::user)
+        if (process_array[ei].level == interrupt::privilege_level_t::system || process_array[pid].level == interrupt::privilege_level_t::user)
             permission_accepted = true;
         else
         {
@@ -222,7 +224,7 @@ namespace multitasking
         {
             if (process_array[pid].is_present)
             {
-                add_to_list(execution_index, process_array[pid].waiting_head, process_array[pid].waiting_tail);
+                add_to_list(ei, process_array[pid].waiting_head, process_array[pid].waiting_tail);
                 drop();
                 return 0;
             }
@@ -444,8 +446,9 @@ namespace multitasking
             }
             else
             {
-                shm_detach(execution_index, id);
-                add_to_list(execution_index, shm_array[id].waiting_head, shm_array[id].waiting_tail);
+                auto& ei = current_execution_index();
+                shm_detach(ei, id);
+                add_to_list(ei, shm_array[id].waiting_head, shm_array[id].waiting_tail);
                 drop();
             }
         }
@@ -777,7 +780,7 @@ namespace multitasking
             process_count--;
             for (uint64_t i = 0; i < MAX_SEMAPHORE_NUMBER; i++)
             {
-                if (semaphore_array[i].is_present && semaphore_array[i].creator_id == execution_index)
+                if (semaphore_array[i].is_present && semaphore_array[i].creator_id == current_execution_index())
                 {
                     destroy_semaphore(i);
                 }
@@ -845,16 +848,17 @@ namespace multitasking
     }
     void scheduler()
     {
-        if (execution_index < MAX_PROCESS_NUMBER)
+        auto& ei = current_execution_index();
+        if (ei < MAX_PROCESS_NUMBER)
         {
-            if (scheduler_timer_ticks >= timesharing_interval || (!process_array[execution_index].is_present))
+            if (scheduler_timer_ticks >= timesharing_interval || (!process_array[ei].is_present))
             {
                 next();
             }
         }
         else
         {
-            execution_index = 0; //initialization
+            ei = 0; //initialization
             drop();
         }
     }
@@ -862,15 +866,16 @@ namespace multitasking
     {
         scheduler_timer_ticks = 0;
         //debug::log(debug::level::inf,"process dropped");
-        execution_index = next_present_process();
+        current_execution_index() = next_present_process();
     }
     void next()
     {
+        auto& ei = current_execution_index();
         scheduler_timer_ticks = 0;
-        auto last_exec = execution_index;
+        auto last_exec = ei;
         if (ready_queue)
         {
-            execution_index = next_present_process();
+            ei = next_present_process();
             add_ready(last_exec);
             //debug::log(debug::level::inf,"process swapped");
         }
@@ -878,13 +883,14 @@ namespace multitasking
 
     void log_panic(const char *message, interrupt::context_t *context = nullptr)
     {
+        auto& ei = current_execution_index();
         if (!context)
-            context = &process_array[execution_index].context;
+            context = &process_array[ei].context;
         debug::log(debug::level::err, "----------------------------------------");
-        if(execution_index==MAX_PROCESS_NUMBER)
+        if(ei==MAX_PROCESS_NUMBER)
             debug::log(debug::level::err, "System crashed");
         else
-            debug::log(debug::level::err, "Process %uld crashed", execution_index);
+            debug::log(debug::level::err, "Process %uld crashed", ei);
         if (message)
             debug::log(debug::level::err, "MSG: %s", message);
         if (context->int_num < 32)
@@ -907,15 +913,16 @@ namespace multitasking
     }
     void panic(const char *message, interrupt::context_t *context)
     {
+        auto& ei = current_execution_index();
         if (!context)
-            context = &process_array[execution_index].context;
+            context = &process_array[ei].context;
         clear(0x4f);
         video::draw_image(ozone_panic_logo[0],{256,256},video::get_screen_size()-video::v2i{256,256});
         printf("\e[48;5;15m\e[31mKERNEL PANIC\n\e[38;5;15m\e[41m");
         if (message)
             printf("MSG: %s\n", message);
-        if(execution_index!=MAX_PROCESS_NUMBER)
-            printf("Process id: %uld\n", execution_index);
+        if(ei!=MAX_PROCESS_NUMBER)
+            printf("Process id: %uld\n", ei);
         else
             printf("System error\n");
         printf("Cause: ");
@@ -958,7 +965,8 @@ namespace multitasking
 
     void abort(const char *msg, interrupt::context_t *context)
     {
-        if (execution_index >= MAX_PROCESS_NUMBER || process_array[execution_index].level == interrupt::privilege_level_t::system || force_panic)
+        auto& ei = current_execution_index();
+        if (ei >= MAX_PROCESS_NUMBER || process_array[ei].level == interrupt::privilege_level_t::system || force_panic)
         {
             debug::log(debug::level::err, "KERNEL PANIC");
             log_panic(msg, context);
@@ -974,15 +982,16 @@ namespace multitasking
                 printf("message: %s",msg);
             printf("\n");*/
             log_panic(msg);
-            destroy_process(execution_index);
+            destroy_process(ei);
         }
     }
     void save_state(interrupt::context_t *context)
     {
         //current process is execution_index if it's valid
-        if (execution_index < MAX_PROCESS_NUMBER)
+        auto& ei = current_execution_index();
+        if (ei < MAX_PROCESS_NUMBER)
         { //save the current state to the process descriptor
-            process_array[execution_index].context = *context;
+            process_array[ei].context = *context;
         }
     }
     interrupt::context_t *load_state()
@@ -991,9 +1000,10 @@ namespace multitasking
         scheduler();
         //once we know which process to run, update cr3 and stack pointer, the rest of the context
         //will be automatically restored before iret
-        paging::set_current_trie(process_array[execution_index].paging_root); //change cr3
+        auto& ei = current_execution_index();
+        paging::set_current_trie(process_array[ei].paging_root); //change cr3
 
-        return &process_array[execution_index].context;
+        return &process_array[ei].context;
     }
 
     void cli()
@@ -1003,6 +1013,11 @@ namespace multitasking
     void sti()
     {
         asm volatile("sti");
+    }
+
+    ozone::pid_t& current_execution_index()
+    {
+        return cpu::get_current_cpu_descriptor_pointer()->running_process;
     }
 
 };

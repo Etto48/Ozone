@@ -100,6 +100,7 @@ namespace cpu
             {
                 if(x.is_present && ! x.is_booted)
                 {
+                    debug::log(debug::level::err,"--Missing CPU core ID:%ud, LAPIC_ID:%ud\n",x.processor_id,x.lapic_id);
                     printf("--Missing CPU core ID:%ud, LAPIC_ID:%ud\n",x.processor_id,x.lapic_id);
                 }
             }

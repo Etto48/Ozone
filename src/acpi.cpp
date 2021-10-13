@@ -152,13 +152,13 @@ namespace acpi
                     {
                         apic::set_IPOL(ioapiciso_address->global_system_interrupt,true);
                         debug::log(debug::level::inf,"--Interrupt %ud set to active low",ioapiciso_address->global_system_interrupt);
-                        printf("--Interrupt %ud set to active low",ioapiciso_address->global_system_interrupt);
+                        printf("--Interrupt %ud set to active low\n",ioapiciso_address->global_system_interrupt);
                     }
                     if(ioapiciso_address->flags & 8)
                     {
                         apic::set_TRGM(ioapiciso_address->global_system_interrupt,true);
                         debug::log(debug::level::inf,"--Interrupt %ud set to level triggered",ioapiciso_address->global_system_interrupt);
-                        printf("--Interrupt %ud set to level triggered",ioapiciso_address->global_system_interrupt);
+                        printf("--Interrupt %ud set to level triggered\n",ioapiciso_address->global_system_interrupt);
                     }
                 }
                 break;
@@ -173,13 +173,13 @@ namespace acpi
                     {
                         apic::set_IPOL(ioapicnmis_address->global_system_interrupt,true);
                         debug::log(debug::level::inf,"--Interrupt %ud set to active low",ioapicnmis_address->global_system_interrupt);
-                        printf("--Interrupt %ud set to active low",ioapicnmis_address->global_system_interrupt);
+                        printf("--Interrupt %ud set to active low\n",ioapicnmis_address->global_system_interrupt);
                     }
                     if(ioapicnmis_address->flags & 8)
                     {
                         apic::set_TRGM(ioapicnmis_address->global_system_interrupt,true);
                         debug::log(debug::level::inf,"--Interrupt %ud set to level triggered",ioapicnmis_address->global_system_interrupt);
-                        printf("--Interrupt %ud set to level triggered",ioapicnmis_address->global_system_interrupt);
+                        printf("--Interrupt %ud set to level triggered\n",ioapicnmis_address->global_system_interrupt);
                     }
 
                 }

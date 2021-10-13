@@ -63,8 +63,10 @@ namespace debug
 			serial_o(buf[i]);
 		serial_o((uint8_t)'\n');
 	}
+	DECLARE_LOCK(debug_lock);
 	void log(level lev, const char *fmt, ...)
 	{
+		LOCK(debug_lock);
 		va_list ap;
 		const uint32_t LOG_MSG_SIZE = 256;
 		char buf[LOG_MSG_SIZE];
@@ -75,6 +77,7 @@ namespace debug
 
 		if (l > 1)
 			do_log(lev, buf, l - 1);
+		UNLOCK(debug_lock);
 	}
 	void init()
 	{

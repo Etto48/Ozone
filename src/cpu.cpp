@@ -134,6 +134,8 @@ namespace cpu
         interrupt::load_idt(interrupt::IDTR);
         multitasking::sti();
 
+
+        //ozone::user::get_id();
         //here goes the smp code
         while(1);
     }

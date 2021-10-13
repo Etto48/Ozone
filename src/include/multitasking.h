@@ -75,6 +75,7 @@ namespace multitasking
     //describes a shared memory unit, has every frame memorized in a linked list
     struct shm_descriptor_t
     {
+        DECLARE_LOCK(shm_lock);
         bool is_present = false;
         bool orphan = false;
         uint64_t npages;
@@ -92,6 +93,7 @@ namespace multitasking
     
     struct semaphore_descriptor_t
     {
+        DECLARE_LOCK(sem_lock);
         bool is_present = false;
         int64_t count;
 

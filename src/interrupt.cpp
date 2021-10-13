@@ -161,10 +161,11 @@ namespace interrupt
         //system level syscalls
         IDT[0x81] = {sys_call_wrapper_system, privilege_level_t::system, privilege_level_t::system, idt_gate_type_t::interrupt_gate, true};
         load_idt(IDTR);
-        asm volatile("sti");
+        //asm volatile("sti");
     }
     extern "C" void *isr_handler(context_t *context)
     {
+        debug::log(debug::level::inf,"Core %ud interrupted",cpu::get_current_processor_id());
         multitasking::save_state(context);
         bool solved = false;
         if(context->int_num == 14 && !(context->int_info & 1))//page fault, unmapped memory
